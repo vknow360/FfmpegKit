@@ -1,7 +1,18 @@
 package com.sunny.ffmpeg;
 
 import android.net.Uri;
-import com.arthenica.ffmpegkit.*;
+import com.arthenica.ffmpegkit.FFmpegKit;
+import com.arthenica.ffmpegkit.FFmpegKitConfig;
+import com.arthenica.ffmpegkit.FFmpegSession;
+import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback;
+import com.arthenica.ffmpegkit.FFprobeKit;
+import com.arthenica.ffmpegkit.FFprobeSession;
+import com.arthenica.ffmpegkit.FFprobeSessionCompleteCallback;
+import com.arthenica.ffmpegkit.Log;
+import com.arthenica.ffmpegkit.LogCallback;
+import com.arthenica.ffmpegkit.ReturnCode;
+import com.arthenica.ffmpegkit.Statistics;
+import com.arthenica.ffmpegkit.StatisticsCallback;
 import com.google.appinventor.components.annotations.DesignerComponent;
 import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.annotations.SimpleFunction;
@@ -88,11 +99,11 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
         }
     }
 
-    @SimpleFunction(description = "Executes given command")
-    public void Execute(String command){
+    @SimpleFunction(description = "Executes given ffmpeg command")
+    public void ExecuteMpeg(String command) {
         FFmpegSession session = FFmpegKit.execute(command);
         if (ReturnCode.isSuccess(session.getReturnCode())){
-            CommandSuccess(true,session.toString());
+            CommandSuccess(true, session.isFFprobe(), session.isMediaInformation(), session.toString());
         } else if (ReturnCode.isCancel(session.getReturnCode())) {
             CommandCancelled(true,session.toString());
         }else {
@@ -100,8 +111,8 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
         }
     }
 
-    @SimpleFunction(description = "Executes given command asynchronously")
-    public void ExecuteAsync(String command){
+    @SimpleFunction(description = "Executes given ffmpeg command asynchronously")
+    public void ExecuteMpegAsync(String command) {
         FFmpegKit.executeAsync(command, new FFmpegSessionCompleteCallback() {
             @Override
             public void apply(final FFmpegSession session) {
@@ -110,7 +121,7 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
                     @Override
                     public void run() {
                         if (ReturnCode.isSuccess(session.getReturnCode())){
-                            CommandSuccess(true,output);
+                            CommandSuccess(true, session.isFFprobe(), session.isMediaInformation(), output);
                         } else if (ReturnCode.isCancel(session.getReturnCode())) {
                             CommandCancelled(true,output);
                         }else {
@@ -142,6 +153,50 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
         });
     }
 
+    @SimpleFunction(description = "Executes given ffprobe command")
+    public void ExecuteProbe(String command) {
+        FFmpegSession session = FFmpegKit.execute(command);
+        if (ReturnCode.isSuccess(session.getReturnCode())) {
+            CommandSuccess(true, session.isFFprobe(), session.isMediaInformation(), session.toString());
+        } else if (ReturnCode.isCancel(session.getReturnCode())) {
+            CommandCancelled(true, session.toString());
+        } else {
+            CommandFailed(true, session.toString());
+        }
+    }
+
+    @SimpleFunction(description = "Executes given ffprobe command asynchronously")
+    public void ExecuteProbeAsync(String command) {
+        FFprobeKit.executeAsync(command, new FFprobeSessionCompleteCallback() {
+            @Override
+            public void apply(FFprobeSession session) {
+                final String output = session.toString();
+                form.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (ReturnCode.isSuccess(session.getReturnCode())) {
+                            CommandSuccess(true, session.isFFprobe(), session.isMediaInformation(), output);
+                        } else if (ReturnCode.isCancel(session.getReturnCode())) {
+                            CommandCancelled(true, output);
+                        } else {
+                            CommandFailed(true, output);
+                        }
+                    }
+                });
+            }
+        }, new LogCallback() {
+            @Override
+            public void apply(final Log log) {
+                form.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        GotNewLog(log.getSessionId(), log.getMessage());
+                    }
+                });
+            }
+        });
+    }
+
     @SimpleEvent(description = "Event raised when new log is obtained in async execution")
     public void GotNewLog(long sessionId, String message){
         EventDispatcher.dispatchEvent(this,"GotNewLog",sessionId, message);
@@ -153,8 +208,8 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
     }
 
     @SimpleEvent(description = "Event raised when previous command was executed successfully")
-    public void CommandSuccess(boolean async,String output){
-        EventDispatcher.dispatchEvent(this,"CommandSuccess",async,output);
+    public void CommandSuccess(boolean async, boolean isProbe, boolean isMediaInformation, String output) {
+        EventDispatcher.dispatchEvent(this, "CommandSuccess", async, isProbe, isMediaInformation, output);
     }
     @SimpleEvent(description = "Event raised when previous command was cancelled")
     public void CommandCancelled(boolean async, String output){
