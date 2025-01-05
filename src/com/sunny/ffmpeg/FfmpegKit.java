@@ -147,20 +147,20 @@ public class FfmpegKit extends AndroidNonvisibleComponent implements OnInitializ
         EventDispatcher.dispatchEvent(this,"GotNewLog",sessionId, message);
     }
 
-    @SimpleEvent()
+    @SimpleEvent(description = "Event raised after getting new stats in async execution")
     public void GotNewStatistics(long sessionId, String statistics){
         EventDispatcher.dispatchEvent(this,"GotNewStatistics",sessionId, statistics);
     }
 
-    @SimpleEvent()
+    @SimpleEvent(description = "Event raised when previous command was executed successfully")
     public void CommandSuccess(boolean async,String output){
         EventDispatcher.dispatchEvent(this,"CommandSuccess",async,output);
     }
-    @SimpleEvent()
+    @SimpleEvent(description = "Event raised when previous command was cancelled")
     public void CommandCancelled(boolean async, String output){
         EventDispatcher.dispatchEvent(this,"CommandCancelled",async,output);
     }
-    @SimpleEvent()
+    @SimpleEvent(description = "Event raised when previous command failed to execute")
     public void CommandFailed(boolean async, String output){
         EventDispatcher.dispatchEvent(this,"CommandFailed",async,output);
     }
